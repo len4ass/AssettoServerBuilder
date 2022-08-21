@@ -17,24 +17,14 @@ namespace AssettoServerBuilder.Workers
 
         public static void CleanFolder(DirectoryInfo target)
         {
-            try
+            foreach (var file in target.GetFiles())
             {
-                foreach (var file in target.GetFiles())
-                {
-                    file.Delete();
-                }
+                file.Delete();
+            }
                 
-                foreach (var dir in target.GetDirectories())
-                {
-                    dir.Delete(true);
-                }
-            } catch (Exception)
+            foreach (var dir in target.GetDirectories())
             {
-                MessageBox.Show($@"Failed to clean {target.FullName}. See output.log for more info.",
-                    @"Error",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
-                throw;
+                dir.Delete(true);
             }
         }
         
@@ -42,33 +32,12 @@ namespace AssettoServerBuilder.Workers
         {
             foreach (var dir in source.GetDirectories())
             {
-                try
-                {
-                    CopyFolderContents(dir, target.CreateSubdirectory(dir.Name));
-                } catch (Exception)
-                {
-                    MessageBox.Show(@"Couldn't copy folder contents. See output.log for more info.",
-                    @"Error",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
-                    throw;
-                }
+                CopyFolderContents(dir, target.CreateSubdirectory(dir.Name));
             }
 
             foreach (var file in source.GetFiles())
             {
-                try
-                {
-                    file.CopyTo(Path.Combine(target.FullName, file.Name));
-                }
-                catch (Exception)
-                {
-                    MessageBox.Show($@"Couldn't copy {file.Name}. See output.log for more info.",
-                    @"Error",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
-                    throw;
-                }
+                file.CopyTo(Path.Combine(target.FullName, file.Name));
             }
         }
     }

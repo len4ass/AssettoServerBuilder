@@ -1,14 +1,19 @@
 using System.IO.Compression;
 using AssettoServerBuilder.Presets;
 using AssettoServerBuilder.Serializer;
+using AssettoServerBuilder.Types;
 using AssettoServerBuilder.Workers;
+using IniParser;
+using IniParser.Model;
 
 namespace AssettoServerBuilder
 {
     public partial class Form1 : Form
     {
-        public static string s_AppBasePath { get; set; }
-        public ApplicationPreset Preset = new();
+        public static List<Entry> Entries = new ();
+        public static int SortEntries { get; set; }
+        public static string? s_AppBasePath { get; set; }
+        private ApplicationPreset _preset = new();
 
         public Form1()
         {
@@ -16,7 +21,7 @@ namespace AssettoServerBuilder
         }
 
         #region Methods attached to events
-
+        
         private void OnFormShown(object sender, EventArgs e)
         {
             s_AppBasePath = Directory.GetCurrentDirectory();
@@ -24,7 +29,7 @@ namespace AssettoServerBuilder
             pathPackedServer.Text = Settings1.Default.pathPackedServer ?? string.Empty;
             pathAiFolder.Text = Settings1.Default.pathAiFolder ?? string.Empty;
             pathExtraConfig.Text = Settings1.Default.pathExtraConfig ?? string.Empty;
-            aiCarsAmount.Text = Settings1.Default.aiCarsAmount.ToString();
+            boolModifyEntryList.Checked = Settings1.Default.ModifyEntryList;
             pathOutputFolder.Text = Settings1.Default.pathOutputFolder ?? string.Empty;
             serverName.Text = Settings1.Default.serverName ?? string.Empty;
             tcpPort.Text = Settings1.Default.tcpPort.ToString();
@@ -43,12 +48,12 @@ namespace AssettoServerBuilder
                 Settings1.Default.pathExtraConfig = pathExtraConfig.Text ?? string.Empty;
                 Settings1.Default.pathOutputFolder = pathOutputFolder.Text ?? string.Empty;
                 Settings1.Default.serverName = serverName.Text ?? string.Empty;
+                Settings1.Default.ModifyEntryList = boolModifyEntryList.Checked;
                 
-                int.TryParse(aiCarsAmount.Text, out int cars);
                 int.TryParse(tcpPort.Text, out int tcp);
                 int.TryParse(udpPort.Text, out int udp);
                 int.TryParse(httpPort.Text, out int http);
-                Settings1.Default.aiCarsAmount = cars;
+                
                 Settings1.Default.tcpPort = tcp;
                 Settings1.Default.udpPort = udp;
                 Settings1.Default.httpPort = http;
@@ -84,7 +89,7 @@ namespace AssettoServerBuilder
                 return;
             }
 
-            Preset = preset;
+            _preset = preset;
             UpdateSettings();
         }
 
@@ -103,7 +108,7 @@ namespace AssettoServerBuilder
             }
 
             SetSettings();
-            FStream.Write(dialog.FileName, Json.Serialize(Preset));
+            FStream.Write(dialog.FileName, Json.Serialize(_preset));
         }
 
         private void OnBrowseServerBase(object sender, EventArgs e)
@@ -210,6 +215,7 @@ namespace AssettoServerBuilder
             }
             catch (Exception exception)
             {
+                Entries.Clear();
                 MessageBox.Show(@"Packing failed. See output.log for more information.",
                     @"Error",
                     MessageBoxButtons.OK,
@@ -224,37 +230,36 @@ namespace AssettoServerBuilder
 
         private void SetSettings()
         {
-            Preset.ServerName = serverName.Text ?? string.Empty;
-            Preset.PathServerBase = pathServerBase.Text ?? string.Empty;
-            Preset.PathServerPacked = pathPackedServer.Text ?? string.Empty;
-            Preset.PathAiFolder = pathAiFolder.Text ?? string.Empty;
-            Preset.PathExtraConfig = pathExtraConfig.Text ?? string.Empty;
-            Preset.PathOutputFolder = pathOutputFolder.Text ?? string.Empty;
-
-            int.TryParse(aiCarsAmount.Text, out int cars);
+            _preset.ServerName = serverName.Text ?? string.Empty;
+            _preset.PathServerBase = pathServerBase.Text ?? string.Empty;
+            _preset.PathServerPacked = pathPackedServer.Text ?? string.Empty;
+            _preset.PathAiFolder = pathAiFolder.Text ?? string.Empty;
+            _preset.PathExtraConfig = pathExtraConfig.Text ?? string.Empty;
+            _preset.PathOutputFolder = pathOutputFolder.Text ?? string.Empty;
+            _preset.ModifyEntryList = boolModifyEntryList.Checked;
+            
             int.TryParse(tcpPort.Text, out int tcp);
             int.TryParse(udpPort.Text, out int udp);
             int.TryParse(httpPort.Text, out int http);
-            Preset.AiCarsAmount = cars;
-            Preset.TcpPort = tcp;
-            Preset.UdpPort = udp;
-            Preset.HttpPort = http;
+            _preset.TcpPort = tcp;
+            _preset.UdpPort = udp;
+            _preset.HttpPort = http;
         }
 
         private void UpdateSettings()
         {
-            serverName.Text = Preset.ServerName;
-            pathServerBase.Text = Preset.PathServerBase;
-            pathPackedServer.Text = Preset.PathServerPacked;
-            pathAiFolder.Text = Preset.PathAiFolder;
-            pathExtraConfig.Text = Preset.PathExtraConfig;
-            aiCarsAmount.Text = Preset.AiCarsAmount.ToString();
-            tcpPort.Text = Preset.TcpPort.ToString();
-            udpPort.Text = Preset.UdpPort.ToString();
-            httpPort.Text = Preset.HttpPort.ToString();
-            pathOutputFolder.Text = Preset.PathOutputFolder;
+            serverName.Text = _preset.ServerName;
+            pathServerBase.Text = _preset.PathServerBase;
+            pathPackedServer.Text = _preset.PathServerPacked;
+            pathAiFolder.Text = _preset.PathAiFolder;
+            pathExtraConfig.Text = _preset.PathExtraConfig;
+            boolModifyEntryList.Checked = _preset.ModifyEntryList;
+            tcpPort.Text = _preset.TcpPort.ToString();
+            udpPort.Text = _preset.UdpPort.ToString();
+            httpPort.Text = _preset.HttpPort.ToString();
+            pathOutputFolder.Text = _preset.PathOutputFolder;
         }
-
+        
         private bool PrepareOutputFolder()
         {
             var files = Directory.GetFiles(pathOutputFolder.Text);
@@ -283,29 +288,11 @@ namespace AssettoServerBuilder
 
         private void CopyServerBase()
         {
-            if (pathServerBase.Text is null || !Directory.Exists(pathServerBase.Text))
-            {
-                MessageBox.Show(@"Base server folder was not specified or does not exist.",
-                    @"Error",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
-                throw new ArgumentException(@"Base server folder was not specified or does not exist.");
-            }
-
             Folder.CopyFolderContents(new DirectoryInfo(pathServerBase.Text), new DirectoryInfo(pathOutputFolder.Text));
         }
 
         private void CopyPackedServer()
         {
-            if (pathPackedServer.Text is null || !File.Exists(pathPackedServer.Text))
-            {
-                MessageBox.Show(@"Packed server was not specified or does not exist.",
-                    @"Error",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
-                throw new ArgumentException(@"Packed server was not specified or does not exist.");
-            }
-
             Archive.Extract(pathPackedServer.Text, pathOutputFolder.Text);
         }
 
@@ -326,20 +313,10 @@ namespace AssettoServerBuilder
             }
 
             var tracksPath = Path.Combine(pathOutputFolder.Text, "content\\tracks\\");
-            if (!Directory.Exists(tracksPath))
-            {
-                MessageBox.Show(@"Subdirectory \content\tracks was not found in output folder.",
-                    @"Error",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
-                throw new ArgumentException(@"Subdirectory \content\tracks was not found in output folder.");
-            }
-
             var targetFolder = new DirectoryInfo(tracksPath);
             var dirs = targetFolder.GetDirectories();
             foreach (var dir in dirs)
             {
-                // Not safe as these folders are not guaranteed to be there
                 if (dir.Name == "csp")
                 {
                     var newTargetFolder = new DirectoryInfo(dir.FullName).GetDirectories()[0];
@@ -363,151 +340,65 @@ namespace AssettoServerBuilder
                 return;
             }
 
-            if (!File.Exists(pathExtraConfig.Text))
-            {
-                MessageBox.Show(@"Extra config on given path does not exist.",
-                    @"Error",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
-                throw new ArgumentException(@"Extra config on given path does not exist.");
-            }
-
             var cfgPath = Path.Combine(pathOutputFolder.Text, "cfg\\");
-            if (!Directory.Exists(cfgPath))
-            {
-                MessageBox.Show(@"Subdirectory \cfg was not found in output folder.",
-                    @"Error",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
-                throw new ArgumentException(@"Subdirectory \cfg was not found in output folder.");
-            }
-
-            try
-            {
-                File.Copy(pathExtraConfig.Text, Path.Combine(cfgPath, Path.GetFileName(pathExtraConfig.Text)));
-            }
-            catch (Exception)
-            {
-                MessageBox.Show(
-                    $@"Failed to copy {Path.GetFileName(pathExtraConfig.Text)}. See output.log for more information.",
-                    @"Error",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
-                throw;
-            }
+            File.Copy(pathExtraConfig.Text, Path.Combine(cfgPath, Path.GetFileName(pathExtraConfig.Text)));
         }
 
-        private void ReplaceAiFixed(string[] entries)
+        private void PatchEntryList()
         {
-            for (int i = 0; i < Preset.AiCarsAmount * 10 && i < entries.Length - 1; i++)
+            if (!boolModifyEntryList.Checked)
             {
-                // Replacing "empty" lines in between cars, still better than .ini serialization
-                if (!entries[i].Any(Char.IsLetter))
-                {
-                    entries[i] = "AI=fixed";
-                }
+                return;
             }
-        }
-        
-        private void PatchAiFixed()
-        {
-            SetSettings();
+            
             var cfgPath = Path.Combine(pathOutputFolder.Text, "cfg\\");
-            if (!Directory.Exists(cfgPath))
+            var entryListPath = Path.Combine(cfgPath, "entry_list.ini");
+
+            var parser = new FileIniDataParser();
+            var iniParsed = parser.ReadFile(entryListPath);
+            Entries = Entry.IniToEntryList(iniParsed);
+            
+            var entryListForm = new Form2();
+            entryListForm.ShowDialog();
+            
+            if (SortEntries == 1)
             {
-                MessageBox.Show(@"Subdirectory \cfg was not found in output folder.",
-                    @"Error",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
-                throw new ArgumentException(@"Subdirectory \cfg was not found in output folder.");
+                Entries = Entry.SortEntriesByAiNone(Entries);
+            } else if (SortEntries == 2)
+            {
+                Entries = Entry.SortEntriesByAiFixed(Entries);
             }
 
-            if (!File.Exists(Path.Combine(cfgPath, "entry_list.ini")))
-            {
-                MessageBox.Show(@"entry_list.ini was not found in \cfg subdirectory in output folder.",
-                    @"Error",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
-                throw new ArgumentException(@"entry_list.ini was not found in \cfg subdirectory in output folder.");
-            }
-
-            var entries = FStream.Read(Path.Combine(cfgPath, "entry_list.ini")).Split("\n");
-            ReplaceAiFixed(entries);
-            FStream.Write(Path.Combine(cfgPath, "entry_list.ini"), string.Join('\n', entries));
+            var ini = Entry.EntryListToIni(Entries);
+            FStream.Write(entryListPath, ini.ToString());
         }
 
-        private void ReplaceServerConfig(string[] entries)
+        private void ModifyServerConfig(IniData iniServerConfig)
         {
-            for (int i = 0; i < entries.Length; i++)
-            {
-                if (entries[i].StartsWith("NAME=") && Preset.ServerName.Length != 0)
-                {
-                    entries[i] = $"NAME={Preset.ServerName}";
-                    continue;
-                }
-
-                if (entries[i].StartsWith("UDP_PORT=") && Preset.UdpPort != 0)
-                {
-                    entries[i] = $"UDP_PORT={Preset.UdpPort}";
-                    continue;
-                }
-
-                if (entries[i].StartsWith("TCP_PORT=") && Preset.TcpPort != 0)
-                {
-                    entries[i] = $"TCP_PORT={Preset.TcpPort}";
-                    continue;
-                }
-
-                if (entries[i].StartsWith("HTTP_PORT=") && Preset.HttpPort != 0)
-                {
-                    entries[i] = $"HTTP_PORT={Preset.HttpPort}";
-                }
-            }
+            iniServerConfig["SERVER"]["NAME"] = serverName.Text;
+            iniServerConfig["SERVER"]["UDP_PORT"] = udpPort.Text;
+            iniServerConfig["SERVER"]["TCP_PORT"] = tcpPort.Text;
+            iniServerConfig["SERVER"]["HTTP_PORT"] = httpPort.Text;
         }
         
         private void PatchSettings()
         {
-            SetSettings();
             var cfgPath = Path.Combine(pathOutputFolder.Text, "cfg\\");
-            if (!Directory.Exists(cfgPath))
-            {
-                MessageBox.Show(@"Subdirectory \cfg was not found in output folder.",
-                    @"Error",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
-                throw new ArgumentException(@"Subdirectory \cfg was not found in output folder.");
-            }
+            var serverCfgPath = Path.Combine(cfgPath, "server_cfg.ini");
 
-            if (!File.Exists(Path.Combine(cfgPath, "server_cfg.ini")))
-            {
-                MessageBox.Show(@"server_cfg.ini was not found in \cfg subdirectory in output folder.",
-                    @"Error",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
-                throw new ArgumentException(@"server_cfg.ini was not found in \cfg subdirectory in output folder.");
-            }
+            var parser = new FileIniDataParser();
+            var iniServerConfig = parser.ReadFile(serverCfgPath);
+            ModifyServerConfig(iniServerConfig);
             
-            var entries = FStream.Read(Path.Combine(cfgPath, "server_cfg.ini")).Split("\n");
-            ReplaceServerConfig(entries);
-            FStream.Write(Path.Combine(cfgPath, "server_cfg.ini"), string.Join('\n', entries));
+            FStream.Write(serverCfgPath, iniServerConfig.ToString());
         }
 
         private void Zip()
         {
-            try
-            {
-                var outputFolderName = Path.GetFileName(pathOutputFolder.Text);
-                var packOutput = Path.Combine(Path.GetFullPath(Path.Combine(pathOutputFolder.Text, "../")), 
-                    $"{outputFolderName} {DateTime.Now:yyyy-MM-dd HH-mm-ss}.zip");
-                ZipFile.CreateFromDirectory(pathOutputFolder.Text, packOutput);
-            } catch (Exception)
-            {
-                MessageBox.Show($@"Couldn't zip {Path.GetDirectoryName(pathOutputFolder.Text)}. See output.log for more information.",
-                @"Error",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error);
-                throw;
-            }
+            var outputFolderName = Path.GetFileName(pathOutputFolder.Text);
+            var packOutput = Path.Combine(Path.GetFullPath(Path.Combine(pathOutputFolder.Text, "../")), 
+                $"{outputFolderName} {DateTime.Now:yyyy-MM-dd HH-mm-ss}.zip");
+            ZipFile.CreateFromDirectory(pathOutputFolder.Text, packOutput);
         }
         
         private void Build()
@@ -517,24 +408,24 @@ namespace AssettoServerBuilder
                 return;
             }
 
-            var startTime = DateTime.Now;
+            SetSettings();
             CopyServerBase();
             CopyPackedServer();
             CopyAiFolder();
             CopyExtraConfig();
-            PatchAiFixed();
+            PatchEntryList();
             PatchSettings();
             Zip();
-            var endTime = DateTime.Now;
+            Entries.Clear();
 
-            MessageBox.Show($@"Packing completed in {(endTime - startTime).TotalSeconds:F2} seconds.",
+            MessageBox.Show($@"Packing completed.",
                 @"Information",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);
 
             Folder.OpenFolder(pathOutputFolder.Text);
         }
-        
+
         #endregion
     }
 }

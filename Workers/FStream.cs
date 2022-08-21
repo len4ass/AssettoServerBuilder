@@ -7,15 +7,19 @@
             try
             {
                 using var read = new StreamReader(path);
-                return read.ReadToEnd();
+                string buffer = read.ReadToEnd();
+                read.Close();
+
+                return buffer;
             }
-            catch (Exception)
+            catch (Exception exception)
             {
-                MessageBox.Show($@"Couldn't read {Path.GetFileName(path)}. See output.log for more info.",
+                MessageBox.Show($@"Failed to read {Path.GetFileName(path)}. See output.log for more information.", 
                     @"Error",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
-                throw;
+                Logger.Log($"{exception.Message}\n{exception}");
+                return string.Empty;
             }
         }
 
@@ -30,14 +34,15 @@
 
                 using var write = new StreamWriter(path, append);
                 write.Write(content);
+                write.Close();
             }
-            catch (Exception)
+            catch (Exception exception)
             {
-                MessageBox.Show($@"Couldn't write to {Path.GetFileName(path)}. See output.log for more info.",
+                MessageBox.Show($@"Failed to write to {path}. See output.log for more information.", 
                     @"Error",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
-                throw;
+                Logger.Log($"{exception.Message}\n{exception}");
             }
         }
     }

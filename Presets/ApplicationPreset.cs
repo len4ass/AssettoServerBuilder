@@ -7,7 +7,7 @@
         public string PathServerPacked { get; set; }
         public string PathAiFolder { get; set; }
         public string PathExtraConfig { get; set; }
-        public int AiCarsAmount { get; set; }
+        public bool ModifyEntryList { get; set; }
         public int TcpPort { get; set; }
         public int UdpPort { get; set; }
         public int HttpPort { get; set; }
@@ -20,7 +20,7 @@
             PathServerPacked = string.Empty;
             PathAiFolder = string.Empty;
             PathExtraConfig = string.Empty;
-            AiCarsAmount = 0;
+            ModifyEntryList = true;
             TcpPort = 0;
             UdpPort = 0;
             HttpPort = 0;
