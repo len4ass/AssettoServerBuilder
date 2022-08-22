@@ -119,7 +119,8 @@ namespace AssettoServerBuilder
             {
                 return;
             }
-            
+
+            UpdatePreset();
             FStream.Write(dialog.FileName, Json.Serialize(_preset));
         }
 
