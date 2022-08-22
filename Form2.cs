@@ -1,4 +1,5 @@
 ﻿using AssettoServerBuilder.Types;
+using AssettoServerBuilder.Workers;
 
 namespace AssettoServerBuilder
 {
@@ -10,8 +11,16 @@ namespace AssettoServerBuilder
             AcceptButton = okEntryList;
             checkTypeEntryList.SelectedIndex = 0;
             sortTypeEntryList.SelectedIndex = 0;
-            
-            entryList.DataSource = Form1.Entries;
+        }
+        
+        public Form2(List<Entry> entries)
+        {
+            InitializeComponent();
+            AcceptButton = okEntryList;
+            checkTypeEntryList.SelectedIndex = 0;
+            sortTypeEntryList.SelectedIndex = 0;
+
+            entryList.DataSource = entries;
             for (int i = 0; i < entryList.Items.Count; i++)
             {
                 var entry = (Entry)entryList.Items[i];
@@ -81,10 +90,10 @@ namespace AssettoServerBuilder
 
             if (sortTypeEntryList.Text == "entries with AI=none go first")
             {
-                Form1.SortEntries = 1;
+                Builder.SortBy = 1;
             } else if (sortTypeEntryList.Text == "entries with AI=fixed go first")
             {
-                Form1.SortEntries = 2;
+                Builder.SortBy = 2;
             }
             
             DialogResult = DialogResult.OK;

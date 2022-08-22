@@ -32,12 +32,18 @@ namespace AssettoServerBuilder.Workers
         {
             foreach (var dir in source.GetDirectories())
             {
-                CopyFolderContents(dir, target.CreateSubdirectory(dir.Name));
+                var targetSubdirectories = target.GetDirectories();
+                bool foundDirectory = targetSubdirectories.Any(targetSubdirectory => targetSubdirectory.Name == dir.Name);
+
+                CopyFolderContents(dir,
+                    foundDirectory
+                        ? new DirectoryInfo(Path.Combine(target.FullName, dir.Name))
+                        : target.CreateSubdirectory(dir.Name));
             }
 
             foreach (var file in source.GetFiles())
             {
-                file.CopyTo(Path.Combine(target.FullName, file.Name));
+                File.Copy(file.FullName, Path.Combine(target.FullName, file.Name), true);
             }
         }
     }

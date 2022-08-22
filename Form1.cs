@@ -1,62 +1,70 @@
-using System.IO.Compression;
 using AssettoServerBuilder.Presets;
 using AssettoServerBuilder.Serializer;
-using AssettoServerBuilder.Types;
 using AssettoServerBuilder.Workers;
-using IniParser;
-using IniParser.Model;
 
 namespace AssettoServerBuilder
 {
     public partial class Form1 : Form
     {
-        public static List<Entry> Entries = new ();
-        public static int SortEntries { get; set; }
-        public static string? s_AppBasePath { get; set; }
         private ApplicationPreset _preset = new();
+        private readonly string _pathDocuments = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
 
         public Form1()
         {
             InitializeComponent();
         }
 
-        #region Methods attached to events
+        #region Event methods
         
         private void OnFormShown(object sender, EventArgs e)
         {
-            s_AppBasePath = Directory.GetCurrentDirectory();
-            pathServerBase.Text = Settings1.Default.pathServerBase ?? string.Empty;
-            pathPackedServer.Text = Settings1.Default.pathPackedServer ?? string.Empty;
-            pathAiFolder.Text = Settings1.Default.pathAiFolder ?? string.Empty;
-            pathExtraConfig.Text = Settings1.Default.pathExtraConfig ?? string.Empty;
-            boolModifyEntryList.Checked = Settings1.Default.ModifyEntryList;
-            pathOutputFolder.Text = Settings1.Default.pathOutputFolder ?? string.Empty;
-            serverName.Text = Settings1.Default.serverName ?? string.Empty;
-            tcpPort.Text = Settings1.Default.tcpPort.ToString();
-            udpPort.Text = Settings1.Default.udpPort.ToString();
-            httpPort.Text = Settings1.Default.httpPort.ToString();
-            SetSettings();
+            try
+            {
+                var documents = new DirectoryInfo(_pathDocuments);
+                bool directoryExists = documents.GetDirectories().Any(dir => dir.Name == "Assetto Server Builder");
+
+                if (!directoryExists)
+                {
+                    documents.CreateSubdirectory("Assetto Server Builder\\");
+                    File.Create(Path.Combine(_pathDocuments, "Assetto Server Builder\\", "output.log"));
+                }
+            }
+            catch (Exception exception)
+            {
+                Logger.Log($"{exception.Message}\n{exception}");
+            }
+
+            Location = Settings1.Default.Location;
+            _preset.ServerName = Settings1.Default.serverName ?? string.Empty;
+            _preset.PathServerBase = Settings1.Default.pathServerBase ?? string.Empty;
+            _preset.PathServerPacked = Settings1.Default.pathPackedServer ?? string.Empty;
+            _preset.PathAiFolder = Settings1.Default.pathAiFolder ?? string.Empty;
+            _preset.PathExtraConfig = Settings1.Default.pathExtraConfig ?? string.Empty;
+            _preset.PathServerConfig = Settings1.Default.pathServerConfig ?? string.Empty;
+            _preset.PathCspExtra = Settings1.Default.pathCspExtraConfig ?? string.Empty;
+            _preset.PathWelcomeMessage = Settings1.Default.pathWelcomeMessage ?? string.Empty;
+            _preset.PathOutputFolder = Settings1.Default.pathOutputFolder ?? string.Empty;
+            _preset.ModifyEntryList = Settings1.Default.ModifyEntryList;
+
+            UpdateSettings();
         }
 
         private void OnFormClosing(object sender, FormClosingEventArgs e)
         {
             try
             {
-                Settings1.Default.pathServerBase = pathServerBase.Text ?? string.Empty;
-                Settings1.Default.pathPackedServer = pathPackedServer.Text ?? string.Empty;
-                Settings1.Default.pathAiFolder = pathAiFolder.Text ?? string.Empty;
-                Settings1.Default.pathExtraConfig = pathExtraConfig.Text ?? string.Empty;
-                Settings1.Default.pathOutputFolder = pathOutputFolder.Text ?? string.Empty;
-                Settings1.Default.serverName = serverName.Text ?? string.Empty;
-                Settings1.Default.ModifyEntryList = boolModifyEntryList.Checked;
-                
-                int.TryParse(tcpPort.Text, out int tcp);
-                int.TryParse(udpPort.Text, out int udp);
-                int.TryParse(httpPort.Text, out int http);
-                
-                Settings1.Default.tcpPort = tcp;
-                Settings1.Default.udpPort = udp;
-                Settings1.Default.httpPort = http;
+                UpdatePreset();
+                Settings1.Default.Location = Location;
+                Settings1.Default.serverName = _preset.ServerName;
+                Settings1.Default.pathServerBase = _preset.PathServerBase;
+                Settings1.Default.pathPackedServer = _preset.PathServerPacked;
+                Settings1.Default.pathAiFolder = _preset.PathAiFolder;
+                Settings1.Default.pathExtraConfig = _preset.PathExtraConfig;
+                Settings1.Default.pathServerConfig = _preset.PathServerConfig;
+                Settings1.Default.pathCspExtraConfig = _preset.PathCspExtra;
+                Settings1.Default.pathWelcomeMessage = _preset.PathWelcomeMessage;
+                Settings1.Default.pathOutputFolder = _preset.PathOutputFolder;
+                Settings1.Default.ModifyEntryList = _preset.ModifyEntryList; 
                 Settings1.Default.Save();
             }
             catch (Exception)
@@ -68,10 +76,15 @@ namespace AssettoServerBuilder
             }
         }
 
+        /*private void OnDataChange(object sender, EventArgs e)
+        {
+            UpdatePreset();
+        }*/
+
         private void OnPresetLoad(object sender, EventArgs e)
         {
             var dialog = new OpenFileDialog();
-            dialog.InitialDirectory = s_AppBasePath;
+            dialog.InitialDirectory = Path.Combine(_pathDocuments, "Assetto Server Builder");
             dialog.Filter = @"JSON (*.json)|*.json";
 
             if (dialog.ShowDialog() == DialogResult.Cancel)
@@ -96,7 +109,7 @@ namespace AssettoServerBuilder
         private void OnPresetSave(object sender, EventArgs e)
         {
             var dialog = new SaveFileDialog();
-            dialog.InitialDirectory = s_AppBasePath;
+            dialog.InitialDirectory = Path.Combine(_pathDocuments, "Assetto Server Builder");
             dialog.FileName = serverName.Text is null || serverName.Text.Length == 0
                 ? "*.json"
                 : $"{serverName.Text}.json";
@@ -106,8 +119,7 @@ namespace AssettoServerBuilder
             {
                 return;
             }
-
-            SetSettings();
+            
             FStream.Write(dialog.FileName, Json.Serialize(_preset));
         }
 
@@ -169,7 +181,7 @@ namespace AssettoServerBuilder
             dialog.Filter = @"YML config (*.yml)|*.yml";
             if (pathExtraConfig.Text is not null && pathExtraConfig.Text.Length != 0)
             {
-                dialog.InitialDirectory = Path.GetFullPath(Path.Combine(pathOutputFolder.Text, "../"));
+                dialog.InitialDirectory = Path.GetFullPath(Path.Combine(pathExtraConfig.Text, "../"));
             }
 
             if (dialog.ShowDialog() == DialogResult.Cancel)
@@ -179,6 +191,60 @@ namespace AssettoServerBuilder
 
             var path = dialog.FileName;
             pathExtraConfig.Text = path;
+        }
+
+        private void OnBrowseServerConfig(object sender, EventArgs e)
+        {
+            var dialog = new OpenFileDialog();
+            dialog.Filter = @".ini config (*.ini)|*.ini";
+            if (pathServerConfig.Text is not null && pathServerConfig.Text.Length != 0)
+            {
+                dialog.InitialDirectory = Path.GetFullPath(Path.Combine(pathServerConfig.Text, "../"));
+            }
+
+            if (dialog.ShowDialog() == DialogResult.Cancel)
+            {
+                return;
+            }
+
+            var path = dialog.FileName;
+            pathServerConfig.Text = path;
+        }
+        
+        private void OnBrowseCspExtraConfig(object sender, EventArgs e)
+        {
+            var dialog = new OpenFileDialog();
+            dialog.Filter = @".ini config (*.ini)|*.ini";
+            if (pathCspExtraConfig.Text is not null && pathCspExtraConfig.Text.Length != 0)
+            {
+                dialog.InitialDirectory = Path.GetFullPath(Path.Combine(pathCspExtraConfig.Text, "../"));
+            }
+
+            if (dialog.ShowDialog() == DialogResult.Cancel)
+            {
+                return;
+            }
+
+            var path = dialog.FileName;
+            pathCspExtraConfig.Text = path;
+        }
+        
+        private void OnBrowseWelcomeMessage(object sender, EventArgs e)
+        {
+            var dialog = new OpenFileDialog();
+            dialog.Filter = @"Text file (*.txt)|*.txt";
+            if (pathWelcomeMessage.Text is not null && pathWelcomeMessage.Text.Length != 0)
+            {
+                dialog.InitialDirectory = Path.GetFullPath(Path.Combine(pathWelcomeMessage.Text, "../"));
+            }
+
+            if (dialog.ShowDialog() == DialogResult.Cancel)
+            {
+                return;
+            }
+
+            var path = dialog.FileName;
+            pathWelcomeMessage.Text = path;
         }
 
         private void OnBrowseOutputFolder(object sender, EventArgs e)
@@ -198,7 +264,7 @@ namespace AssettoServerBuilder
             pathOutputFolder.Text = path;
         }
 
-        private void OnPack(object sender, EventArgs e)
+        private void OnBuildCurrentPreset(object sender, EventArgs e)
         {
             if (pathOutputFolder.Text is null || !Directory.Exists(pathOutputFolder.Text))
             {
@@ -209,41 +275,83 @@ namespace AssettoServerBuilder
                 return;
             }
 
+            UpdatePreset();
+            
             try
             {
-                Build();
+                Builder.Run(_preset);
             }
             catch (Exception exception)
             {
-                Entries.Clear();
-                MessageBox.Show(@"Packing failed. See output.log for more information.",
+                Logger.Log($"{exception.Message}\n{exception}");
+                var result = MessageBox.Show($@"Packing {_preset.ServerName} failed. See output.log for more information.",
                     @"Error",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
-                Logger.Log($"{exception.Message}\n{exception}");
+                
+                if (result != DialogResult.None)
+                {
+                    Folder.OpenFolder(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Assetto Server Builder\\"));
+                }
             }
         }
 
-        #endregion
+        private void OnBuildMultiplePresets(object sender, EventArgs e)
+        {
+            var dialog = new OpenFileDialog();
+            dialog.InitialDirectory = Path.Combine(_pathDocuments, "Assetto Server Builder");
+            dialog.Filter = @"JSON (*.json)|*.json";
+            dialog.Multiselect = true;
+            dialog.Title = @"Choose multiple presets...";
 
+            if (dialog.ShowDialog() == DialogResult.Cancel)
+            {
+                return;
+            }
+
+            foreach (string file in dialog.FileNames)
+            {
+                var preset = Json.Deserialize<ApplicationPreset>(FStream.Read(file));
+
+                try
+                {
+                    if (preset is not null)
+                    {
+                        Builder.Run(preset);
+                    }
+                }
+                catch (Exception exception)
+                {
+                    Logger.Log($"{exception.Message}\n{exception}");
+                    var result = MessageBox.Show($@"Packing {preset!.ServerName} failed. See output.log for more information.",
+                        @"Error",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+
+                    if (result != DialogResult.None)
+                    {
+                        Folder.OpenFolder(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Assetto Server Builder\\"));
+                    }
+                }
+            }
+        }
+        
+        #endregion
+        
         #region Utility methods
 
-        private void SetSettings()
+        private void UpdatePreset()
         {
             _preset.ServerName = serverName.Text ?? string.Empty;
             _preset.PathServerBase = pathServerBase.Text ?? string.Empty;
             _preset.PathServerPacked = pathPackedServer.Text ?? string.Empty;
             _preset.PathAiFolder = pathAiFolder.Text ?? string.Empty;
             _preset.PathExtraConfig = pathExtraConfig.Text ?? string.Empty;
+            _preset.PathServerConfig = pathServerConfig.Text ?? string.Empty;
+            _preset.PathCspExtra = pathCspExtraConfig.Text ?? string.Empty;
+            _preset.PathWelcomeMessage = pathWelcomeMessage.Text ?? string.Empty;
             _preset.PathOutputFolder = pathOutputFolder.Text ?? string.Empty;
             _preset.ModifyEntryList = boolModifyEntryList.Checked;
-            
-            int.TryParse(tcpPort.Text, out int tcp);
-            int.TryParse(udpPort.Text, out int udp);
-            int.TryParse(httpPort.Text, out int http);
-            _preset.TcpPort = tcp;
-            _preset.UdpPort = udp;
-            _preset.HttpPort = http;
         }
 
         private void UpdateSettings()
@@ -253,177 +361,11 @@ namespace AssettoServerBuilder
             pathPackedServer.Text = _preset.PathServerPacked;
             pathAiFolder.Text = _preset.PathAiFolder;
             pathExtraConfig.Text = _preset.PathExtraConfig;
-            boolModifyEntryList.Checked = _preset.ModifyEntryList;
-            tcpPort.Text = _preset.TcpPort.ToString();
-            udpPort.Text = _preset.UdpPort.ToString();
-            httpPort.Text = _preset.HttpPort.ToString();
+            pathServerConfig.Text = _preset.PathServerConfig;
+            pathCspExtraConfig.Text = _preset.PathCspExtra;
+            pathWelcomeMessage.Text = _preset.PathWelcomeMessage;
             pathOutputFolder.Text = _preset.PathOutputFolder;
-        }
-        
-        private bool PrepareOutputFolder()
-        {
-            var files = Directory.GetFiles(pathOutputFolder.Text);
-            var directories = Directory.GetDirectories(pathOutputFolder.Text);
-
-            if (files.Length == 0 && directories.Length == 0)
-            {
-                return true;
-            }
-
-            var result = MessageBox.Show("Files or directories have been found in the output folder. \n" +
-                                         "Do you want to clean the output folder and pack?\n" +
-                                         "'Yes' will clean the output folder and start packing, 'No' will abort.",
-                @"Information",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Question);
-
-            if (result != DialogResult.Yes)
-            {
-                return false;
-            }
-
-            Folder.CleanFolder(new DirectoryInfo(pathOutputFolder.Text));
-            return true;
-        }
-
-        private void CopyServerBase()
-        {
-            Folder.CopyFolderContents(new DirectoryInfo(pathServerBase.Text), new DirectoryInfo(pathOutputFolder.Text));
-        }
-
-        private void CopyPackedServer()
-        {
-            Archive.Extract(pathPackedServer.Text, pathOutputFolder.Text);
-        }
-
-        private void CopyAiFolder()
-        {
-            if (pathAiFolder.Text is null || pathAiFolder.Text.Length == 0)
-            {
-                return;
-            }
-
-            if (!Directory.Exists(pathAiFolder.Text))
-            {
-                MessageBox.Show($@"AI folder path does not exist. Continuing packing...",
-                    @"Error",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information);
-                return;
-            }
-
-            var tracksPath = Path.Combine(pathOutputFolder.Text, "content\\tracks\\");
-            var targetFolder = new DirectoryInfo(tracksPath);
-            var dirs = targetFolder.GetDirectories();
-            foreach (var dir in dirs)
-            {
-                if (dir.Name == "csp")
-                {
-                    var newTargetFolder = new DirectoryInfo(dir.FullName).GetDirectories()[0];
-                    Directory.CreateDirectory(Path.Combine(dir.FullName, newTargetFolder.Name, "ai\\"));
-                    Folder.CopyFolderContents(new DirectoryInfo(pathAiFolder.Text),
-                        new DirectoryInfo(Path.Combine(dir.FullName, newTargetFolder.Name, "ai\\")));
-                }
-                else
-                {
-                    Directory.CreateDirectory(Path.Combine(dir.FullName, "ai\\"));
-                    Folder.CopyFolderContents(new DirectoryInfo(pathAiFolder.Text),
-                        new DirectoryInfo(Path.Combine(dir.FullName, "ai\\")));
-                }
-            }
-        }
-
-        private void CopyExtraConfig()
-        {
-            if (pathExtraConfig.Text is null || pathExtraConfig.Text.Length == 0)
-            {
-                return;
-            }
-
-            var cfgPath = Path.Combine(pathOutputFolder.Text, "cfg\\");
-            File.Copy(pathExtraConfig.Text, Path.Combine(cfgPath, Path.GetFileName(pathExtraConfig.Text)));
-        }
-
-        private void PatchEntryList()
-        {
-            if (!boolModifyEntryList.Checked)
-            {
-                return;
-            }
-            
-            var cfgPath = Path.Combine(pathOutputFolder.Text, "cfg\\");
-            var entryListPath = Path.Combine(cfgPath, "entry_list.ini");
-
-            var parser = new FileIniDataParser();
-            var iniParsed = parser.ReadFile(entryListPath);
-            Entries = Entry.IniToEntryList(iniParsed);
-            
-            var entryListForm = new Form2();
-            entryListForm.ShowDialog();
-            
-            if (SortEntries == 1)
-            {
-                Entries = Entry.SortEntriesByAiNone(Entries);
-            } else if (SortEntries == 2)
-            {
-                Entries = Entry.SortEntriesByAiFixed(Entries);
-            }
-
-            var ini = Entry.EntryListToIni(Entries);
-            FStream.Write(entryListPath, ini.ToString());
-        }
-
-        private void ModifyServerConfig(IniData iniServerConfig)
-        {
-            iniServerConfig["SERVER"]["NAME"] = serverName.Text;
-            iniServerConfig["SERVER"]["UDP_PORT"] = udpPort.Text;
-            iniServerConfig["SERVER"]["TCP_PORT"] = tcpPort.Text;
-            iniServerConfig["SERVER"]["HTTP_PORT"] = httpPort.Text;
-        }
-        
-        private void PatchSettings()
-        {
-            var cfgPath = Path.Combine(pathOutputFolder.Text, "cfg\\");
-            var serverCfgPath = Path.Combine(cfgPath, "server_cfg.ini");
-
-            var parser = new FileIniDataParser();
-            var iniServerConfig = parser.ReadFile(serverCfgPath);
-            ModifyServerConfig(iniServerConfig);
-            
-            FStream.Write(serverCfgPath, iniServerConfig.ToString());
-        }
-
-        private void Zip()
-        {
-            var outputFolderName = Path.GetFileName(pathOutputFolder.Text);
-            var packOutput = Path.Combine(Path.GetFullPath(Path.Combine(pathOutputFolder.Text, "../")), 
-                $"{outputFolderName} {DateTime.Now:yyyy-MM-dd HH-mm-ss}.zip");
-            ZipFile.CreateFromDirectory(pathOutputFolder.Text, packOutput);
-        }
-        
-        private void Build()
-        {
-            if (!PrepareOutputFolder())
-            {
-                return;
-            }
-
-            SetSettings();
-            CopyServerBase();
-            CopyPackedServer();
-            CopyAiFolder();
-            CopyExtraConfig();
-            PatchEntryList();
-            PatchSettings();
-            Zip();
-            Entries.Clear();
-
-            MessageBox.Show($@"Packing completed.",
-                @"Information",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information);
-
-            Folder.OpenFolder(pathOutputFolder.Text);
+            boolModifyEntryList.Checked = _preset.ModifyEntryList;
         }
 
         #endregion

@@ -6,7 +6,7 @@ namespace AssettoServerBuilder.Workers
     {
         public static void Extract(string source, string target)
         {
-            ZipFile.ExtractToDirectory(source, target);
+            ZipFile.ExtractToDirectory(source, target, true);
         }
     }
 }

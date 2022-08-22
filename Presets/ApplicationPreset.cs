@@ -7,10 +7,10 @@
         public string PathServerPacked { get; set; }
         public string PathAiFolder { get; set; }
         public string PathExtraConfig { get; set; }
+        public string PathServerConfig { get; set; }
+        public string PathCspExtra { get; set; }
+        public string PathWelcomeMessage { get; set; }
         public bool ModifyEntryList { get; set; }
-        public int TcpPort { get; set; }
-        public int UdpPort { get; set; }
-        public int HttpPort { get; set; }
         public string PathOutputFolder { get; set; }
 
         public ApplicationPreset()
@@ -20,10 +20,10 @@
             PathServerPacked = string.Empty;
             PathAiFolder = string.Empty;
             PathExtraConfig = string.Empty;
+            PathServerConfig = string.Empty;
+            PathCspExtra = string.Empty;
+            PathWelcomeMessage = string.Empty;
             ModifyEntryList = true;
-            TcpPort = 0;
-            UdpPort = 0;
-            HttpPort = 0;
             PathOutputFolder = string.Empty;
         }
     }

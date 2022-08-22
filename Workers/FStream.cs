@@ -14,11 +14,11 @@
             }
             catch (Exception exception)
             {
+                Logger.Log($"{exception.Message}\n{exception}");
                 MessageBox.Show($@"Failed to read {Path.GetFileName(path)}. See output.log for more information.", 
                     @"Error",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
-                Logger.Log($"{exception.Message}\n{exception}");
                 return string.Empty;
             }
         }
@@ -27,22 +27,28 @@
         {
             try
             {
-                if (append && !File.Exists(path))
-                {
-                    File.Create(path);
-                }
-
                 using var write = new StreamWriter(path, append);
                 write.Write(content);
                 write.Close();
             }
             catch (Exception exception)
             {
-                MessageBox.Show($@"Failed to write to {path}. See output.log for more information.", 
+                if (path == Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                        "Assetto Server Builder\\", 
+                        "output.log"))
+                {
+                    MessageBox.Show($@"Failed to log information. That shouldn't happen.", 
+                        @"Error",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                    return;
+                }
+                
+                Logger.Log($"{exception.Message}\n{exception}");
+                MessageBox.Show($@"Failed to write to {path}. See output.log for more information", 
                     @"Error",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
-                Logger.Log($"{exception.Message}\n{exception}");
             }
         }
     }

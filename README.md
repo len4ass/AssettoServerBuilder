@@ -3,13 +3,13 @@
 ## Info
 A winforms app that saves you a lot of time by automating file merging.
 
-![Assetto Server Builder image](https://i.imgur.com/DpFhN42.png)
+![Assetto Server Builder image](https://i.imgur.com/PKZ4W4a.png)
 
 *Main window*
 \
 \
 \
-![Assetto Server Builder entry list modifier image](https://i.imgur.com/4nvyqpI.png)
+![Assetto Server Builder entry list modifier image](https://i.imgur.com/EJJl8EY.png)
 
 *Entry list modifier*
 
@@ -19,17 +19,19 @@ A winforms app that saves you a lot of time by automating file merging.
 
 #### Main window
 - `Browse` will let you navigate through directories with Windows GUI
-- `Server name` will patch a name of your server to whatever you type in there
+- `Server name` doesn't do anything except it's useful for saving presets and shows up in entry list window when building
 - `AssettoServer base` expects an absolute path to a folder containing [AssettoServer](https://github.com/compujuckel/AssettoServer) files
 - `Packed server` expects an absolute path to a zip archive with server tracks and cars you made in [Content Manager](https://acstuff.ru/app/)
 - `AI folder (optional)` expects an absolute path to the folder where you keep your splines for given track
-- `Extra config (optional)` expects an absolute path to extra_cfg.yml 
-- `TCP port (optional)` will set `TCP_PORT` in `server_cfg.ini` to that value
-- `UDP port (optional)` will set `UDP_PORT` in `server_cfg.ini` to that value
-- `HTTP port (optional)` will set `HTTP_PORT` in `server_cfg.ini` to that value
-- `Modify entry_list` enables or disables entry list modifier once you press build and pack
+- `Extra config (optional)` expects an absolute path to `extra_cfg.yml`
+- `Server config (optional)` expects an absolute path to `server_cfg.ini`
+- `CSP extra config (optional)` expects an absolute path to `csp_extra_options.ini`
+- `Welcome message (optional)` expects an absolute path to `welcome.txt`
 - `Output folder` expects an absolute path to the folder where you want the merge result
-- `Build and pack` starts merging proccess and packs the result in ZIP (one directory up relative to output folder)
+- `Modify entry_list` enables or disables entry list modifier once you press build and pack
+- `Build` starts merging proccess and packs the result in ZIP (one directory up relative to output folder)
+  - `Current preset` - builds and packs from current settings
+  - `Multiple presets` - builds and packs from multiple chosen .json presets (simply select multiple files in a dialog window and click Open)
 
 #### Entry list
 - `Sort entry_list` is useful when you want to make sure traffic or player cars are loaded first or last

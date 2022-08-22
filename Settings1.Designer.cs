@@ -109,37 +109,37 @@ namespace AssettoServerBuilder {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("0")]
-        public int tcpPort {
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string pathServerConfig {
             get {
-                return ((int)(this["tcpPort"]));
+                return ((string)(this["pathServerConfig"]));
             }
             set {
-                this["tcpPort"] = value;
+                this["pathServerConfig"] = value;
             }
         }
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("0")]
-        public int udpPort {
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string pathCspExtraConfig {
             get {
-                return ((int)(this["udpPort"]));
+                return ((string)(this["pathCspExtraConfig"]));
             }
             set {
-                this["udpPort"] = value;
+                this["pathCspExtraConfig"] = value;
             }
         }
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("0")]
-        public int httpPort {
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string pathWelcomeMessage {
             get {
-                return ((int)(this["httpPort"]));
+                return ((string)(this["pathWelcomeMessage"]));
             }
             set {
-                this["httpPort"] = value;
+                this["pathWelcomeMessage"] = value;
             }
         }
         
@@ -152,6 +152,18 @@ namespace AssettoServerBuilder {
             }
             set {
                 this["ModifyEntryList"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0, 0")]
+        public global::System.Drawing.Point Location {
+            get {
+                return ((global::System.Drawing.Point)(this["Location"]));
+            }
+            set {
+                this["Location"] = value;
             }
         }
     }

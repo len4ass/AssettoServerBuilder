@@ -13,11 +13,11 @@ namespace AssettoServerBuilder.Serializer
             }
             catch (Exception exception)
             {
+                Logger.Log($"{exception.Message}\n{exception}");
                 MessageBox.Show($@"Failed to serialize {obj}. See output.log for more information.", 
                     @"Error",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
-                Logger.Log($"{exception.Message}\n{exception}");
                 return string.Empty;
             }
         }
@@ -31,11 +31,11 @@ namespace AssettoServerBuilder.Serializer
             }
             catch (Exception exception)
             {
+                Logger.Log($"{exception.Message}\n{exception}");
                 MessageBox.Show($@"Failed to deserialize '{obj}'. See output.log for more information.", 
                     @"Error",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
-                Logger.Log($"{exception.Message}\n{exception}");
                 return default;
             }
         }
